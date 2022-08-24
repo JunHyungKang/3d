@@ -1,3 +1,5 @@
+from tqdm.auto import tqdm
+
 import torch
 
 def predict(model, test_loader, device):

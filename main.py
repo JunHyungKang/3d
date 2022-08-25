@@ -3,16 +3,12 @@ import random
 import pandas as pd
 import numpy as np
 import os
-import glob
-from tqdm.auto import tqdm
 
 import torch
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from sklearn.metrics import accuracy_score
+from torch.utils.data import DataLoader
 
-from model import BaseModel
+from models.basemodel import BaseModel
+import models.c3d
 from train import train
 from data import CustomDataset
 from test import predict
@@ -32,7 +28,8 @@ CFG = {
     'sample_csv': './data/sample_submission.csv',
     'test_h5': './data/test.h5',
     'save_path': './weights',
-    'submit_file': 'submit_2.csv'
+    'submit_file': 'submit_4_c3d',
+    'model': 'c3d'
 }
 
 
@@ -55,22 +52,31 @@ all_points = h5py.File(CFG['tr_h5'], 'r')
 train_df = pd.read_csv('./data/split_train.csv')
 val_df = pd.read_csv('./data/split_val.csv')
 
-model = BaseModel()
+if CFG['model'] == 'basemodel':
+    model = BaseModel()
+elif CFG['model'] == 'c3d':
+    from models.c3d import get_fine_tuning_parameters
+    model = models.c3d.get_model(
+        num_classes=10,
+        sample_size=16,
+        sample_duration=16)
+
 model.eval()
+
 optimizer = torch.optim.Adam(params=model.parameters(), lr=CFG["LEARNING_RATE"])
 # TODO: cosine anealing 적용
 scheduler = None
 
-train_dataset = CustomDataset(train_df['ID'].values, train_df['label'].values, all_points)
+train_dataset = CustomDataset(train_df['ID'].values, train_df['label'].values, all_points, augment=True)
 train_loader = DataLoader(train_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=True, num_workers=0)
-val_dataset = CustomDataset(val_df['ID'].values, val_df['label'].values, all_points)
+val_dataset = CustomDataset(val_df['ID'].values, val_df['label'].values, all_points, augment=True)
 val_loader = DataLoader(val_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=False, num_workers=0)
 
 train(model, optimizer, train_loader, val_loader, scheduler, device, CFG)
 
 test_df = pd.read_csv(CFG['sample_csv'])
 test_points = h5py.File(CFG['test_h5'], 'r')
-test_dataset = CustomDataset(test_df['ID'].values, None, test_points)
+test_dataset = CustomDataset(test_df['ID'].values, None, test_points, augment=False)
 test_loader = DataLoader(test_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=False, num_workers=0)
 
 checkpoint = torch.load(os.path.join(CFG['save_path'], 'best_model.pth'))

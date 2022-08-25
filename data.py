@@ -1,4 +1,6 @@
 import numpy as np
+import random
+import math
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -47,10 +49,11 @@ def get_vector(points, x_y_z=[16, 16, 16]):
 
 class CustomDataset(Dataset):
     # TODO: data augmentation 코드 추가
-    def __init__(self, id_list, label_list, point_list):
+    def __init__(self, id_list, label_list, point_list, augment):
         self.id_list = id_list
         self.label_list = label_list
         self.point_list = point_list
+        self.augment = augment
 
     def __getitem__(self, index):
         image_id = self.id_list[index]
@@ -58,6 +61,8 @@ class CustomDataset(Dataset):
         # TODO: h5 별도 파일로 저장하여 사용
         # h5파일을 바로 접근하여 사용하면 학습 속도가 병목 현상으로 많이 느릴 수 있습니다.
         points = self.point_list[str(image_id)][:]
+        if self.augment:
+            points = rand_rotate(points)
         image = get_vector(points)
 
         if self.label_list is not None:
@@ -68,3 +73,13 @@ class CustomDataset(Dataset):
 
     def __len__(self):
         return len(self.id_list)
+
+
+def rand_rotate(dots):
+    a, b, c = math.radians(random.randint(0, 360)), math.radians(random.randint(0, 360)), math.radians(random.randint(0, 360))
+    mx = np.array([[1, 0, 0], [0, np.cos(a), -np.sin(a)], [0, np.sin(a), np.cos(a)]])
+    my = np.array([[np.cos(b), 0, np.sin(b)], [0, 1, 0], [-np.sin(b), 0, np.cos(b)]])
+    mz = np.array([[np.cos(c), -np.sin(c), 0], [np.sin(c), np.cos(c), 0], [0, 0, 1]])
+    m = np.dot(np.dot(mx,my),mz)
+    dots = np.dot(dots, m.T)
+    return dots

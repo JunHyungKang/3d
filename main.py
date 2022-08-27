@@ -21,14 +21,14 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 CFG = {
     'EPOCHS': 100,
     'LEARNING_RATE': 1e-3,
-    'BATCH_SIZE': 256,
+    'BATCH_SIZE': 32,
     'SEED': 77,
     'tr_csv': './data/train.csv',
     'tr_h5': './data/train.h5',
     'sample_csv': './data/sample_submission.csv',
     'test_h5': './data/test.h5',
     'save_path': './weights',
-    'submit_file': 'submit_4_c3d',
+    'submit_file': 'submit_5_c3d_scheduler.csv',
     'model': 'c3d'
 }
 
@@ -64,8 +64,16 @@ elif CFG['model'] == 'c3d':
 model.eval()
 
 optimizer = torch.optim.Adam(params=model.parameters(), lr=CFG["LEARNING_RATE"])
-# TODO: cosine anealing 적용
-scheduler = None
+scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.96, last_epoch=-1)
+
+# optimizer = torch.optim.SGD(self.model.parameters(), lr=CFG["LEARNING_RATE"]*2, momentum=0.9)
+# scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer=optimizer, base_lr=CFG["LEARNING_RATE"]/50,
+#                                               max_lr=CFG["LEARNING_RATE"]*2, step_size_up=10,
+#                                               step_size_down=None, mode='exp_range',
+#                                               gamma=0.995, scale_fn=None, scale_mode='cycle',
+#                                               cycle_momentum=True, base_momentum=0.8, max_momentum=0.9,
+#                                               last_epoch=- 1, verbose=False)
+
 
 train_dataset = CustomDataset(train_df['ID'].values, train_df['label'].values, all_points, augment=True)
 train_loader = DataLoader(train_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=True, num_workers=0)
@@ -80,7 +88,7 @@ test_dataset = CustomDataset(test_df['ID'].values, None, test_points, augment=Fa
 test_loader = DataLoader(test_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=False, num_workers=0)
 
 checkpoint = torch.load(os.path.join(CFG['save_path'], 'best_model.pth'))
-model = BaseModel()
+# model = BaseModel()
 model.load_state_dict(checkpoint)
 model.eval()
 

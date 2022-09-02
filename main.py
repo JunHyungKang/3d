@@ -3,10 +3,11 @@ import random
 import pandas as pd
 import numpy as np
 import os
+import shutil
 
 import torch
 from torch.utils.data import DataLoader
-import tensorboard
+from torch.utils.tensorboard import SummaryWriter
 
 from models.basemodel import BaseModel
 import models.c3d
@@ -22,7 +23,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 CFG = {
     'EPOCHS': 100,
     'LEARNING_RATE': 1e-3,
-    'BATCH_SIZE': 512,
+    'BATCH_SIZE': 256,
     'SEED': 77,
     'tr_csv': './data/train.csv',
     'tr_h5': './data/train.h5',
@@ -45,6 +46,10 @@ def seed_everything(seed):
 
 
 seed_everything(CFG['SEED'])  # Seed 고정
+
+if os.path.isdir(f'./runs/{CFG["submit_file"].split(".")[0]}'):
+    shutil.rmtree(f'./runs/{CFG["submit_file"].split(".")[0]}')
+writer = SummaryWriter(f'./runs/{CFG["submit_file"].split(".")[0]}')
 
 # TODO: 5 split + 앙상블 코드 추가
 train_df = pd.read_csv('./data/split_train.csv')
@@ -78,8 +83,8 @@ train_loader = DataLoader(train_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=T
 val_dataset = CustomDataset(val_df['ID'].values, val_df['label'].values, augment=True, task='trainval')
 val_loader = DataLoader(val_dataset, batch_size=CFG['BATCH_SIZE'], shuffle=False)
 
-# TODO: 학습 비교 가능하도록 tensorboard 나 wandb 추가 (가능하면 wandb를 사용해보자!)
-train(model, optimizer, train_loader, val_loader, scheduler, device, CFG)
+# TODO: tensorboard를 wandb로 변경
+train(model, optimizer, train_loader, val_loader, scheduler, device, CFG, writer)
 
 test_df = pd.read_csv(CFG['sample_csv'])
 test_points = h5py.File(CFG['test_h5'], 'r')

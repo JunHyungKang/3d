@@ -1,6 +1,7 @@
 import os
 from tqdm.auto import tqdm
 import numpy as np
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -18,6 +19,7 @@ def train(model, optimizer, train_loader, val_loader, scheduler, device, CFG):
     for epoch in range(1, CFG['EPOCHS'] + 1):
         model.train()
         train_loss = []
+
         for data, label in tqdm(iter(train_loader)):
             data, label = data.float().to(device), label.long().to(device)
             optimizer.zero_grad()

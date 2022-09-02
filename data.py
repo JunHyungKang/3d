@@ -1,9 +1,12 @@
 import numpy as np
 import random
 import math
+import os
+import tqdm
 
 import torch
 from torch.utils.data import Dataset, DataLoader
+import time
 
 
 def get_vector(points, x_y_z=[16, 16, 16]):
@@ -42,25 +45,24 @@ def get_vector(points, x_y_z=[16, 16, 16]):
     vector = np.zeros(n_voxels)
     count = np.bincount(structure[:, 3])
     vector[:len(count)] = count
-
+    vector /= 255.0
     vector = vector.reshape((n_z, n_y, n_x))
     return vector
 
 
 class CustomDataset(Dataset):
-    # TODO: data augmentation 코드 추가
-    def __init__(self, id_list, label_list, point_list, augment):
+    def __init__(self, id_list, label_list, augment, task):
         self.id_list = id_list
         self.label_list = label_list
-        self.point_list = point_list
         self.augment = augment
+        if task == 'trainval':
+            self.pre_load = {x: np.load(os.path.join('./data/train_array', f'{x}.npy')).astype(np.uint8) for x in tqdm.tqdm(self.id_list)}
+        elif task == 'test':
+            self.pre_load = {x: np.load(os.path.join('./data/test_array', f'{x}.npy')).astype(np.unit8) for x in tqdm.tqdm(self.id_list)}
 
     def __getitem__(self, index):
         image_id = self.id_list[index]
-
-        # TODO: h5 별도 파일로 저장하여 사용
-        # h5파일을 바로 접근하여 사용하면 학습 속도가 병목 현상으로 많이 느릴 수 있습니다.
-        points = self.point_list[str(image_id)][:]
+        points = self.pre_load[image_id]
         if self.augment:
             points = rand_rotate(points)
         image = get_vector(points)
@@ -80,6 +82,6 @@ def rand_rotate(dots):
     mx = np.array([[1, 0, 0], [0, np.cos(a), -np.sin(a)], [0, np.sin(a), np.cos(a)]])
     my = np.array([[np.cos(b), 0, np.sin(b)], [0, 1, 0], [-np.sin(b), 0, np.cos(b)]])
     mz = np.array([[np.cos(c), -np.sin(c), 0], [np.sin(c), np.cos(c), 0], [0, 0, 1]])
-    m = np.dot(np.dot(mx,my),mz)
+    m = np.dot(np.dot(mx, my), mz)
     dots = np.dot(dots, m.T)
     return dots

@@ -61,6 +61,12 @@ class C3D(nn.Module):
 
         last_duration = int(math.floor(sample_duration / 16))
         last_size = int(math.ceil(sample_size / 32))
+        if sample_duration == 32:
+            last_duration = 2
+        if sample_size == 32:
+            last_size = 2
+        # print(f'last duration: {last_duration}, last size: {last_size}')
+        # print(f'fc1 input: {(512 * last_duration * last_size * last_size)}')
         self.fc1 = nn.Sequential(
             nn.Linear((512 * last_duration * last_size * last_size) , 4096),
             nn.ReLU(),
@@ -78,6 +84,7 @@ class C3D(nn.Module):
         out = self.group3(out)
         out = self.group4(out)
         out = self.group5(out)
+        # print(f'group5 output: {out.size()}')
         out = out.view(out.size(0), -1)
         out = self.fc1(out)
         out = self.fc2(out)

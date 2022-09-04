@@ -11,12 +11,12 @@ from data import CustomDataset
 from val import validation
 
 
-def train(model, optimizer, train_loader, val_loader, scheduler, device, CFG, writer):
-    save_path = CFG['save_path']
+def train(model, optimizer, train_loader, val_loader, scheduler, device, writer, args):
+    save_path = f'./weights/{args.submit_csv.split(".")[0]}'
     model.to(device)
     criterion = nn.CrossEntropyLoss().to(device)
     best_score = 0
-    for epoch in range(1, CFG['EPOCHS'] + 1):
+    for epoch in range(1, args.num_epoch + 1):
         model.train()
         train_loss = []
 
@@ -37,9 +37,10 @@ def train(model, optimizer, train_loader, val_loader, scheduler, device, CFG, wr
 
         val_loss, val_acc = validation(model, criterion, val_loader, device)
         print(f'Epoch : [{epoch}] Train Loss : [{np.mean(train_loss)}] Val Loss : [{val_loss}] Val ACC : [{val_acc}]')
-        self.writer.add_scalar('Loss/train', np.mean(train_loss), epoch)
-        self.writer.add_scalar('Loss/val', val_loss, epoch)
-        self.writer.add_scalar('val_acc', val_acc, epoch)
+        writer.add_scalar('Param/lr', optimizer.param_groups[0]['lr'], epoch)
+        writer.add_scalar('Loss/train', np.mean(train_loss), epoch)
+        writer.add_scalar('Loss/val', val_loss, epoch)
+        writer.add_scalar('val_acc', val_acc, epoch)
 
         if best_score < val_acc:
             best_score = val_acc

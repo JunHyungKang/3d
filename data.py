@@ -9,7 +9,8 @@ from torch.utils.data import Dataset, DataLoader
 import time
 
 
-def get_vector(points, x_y_z=[16, 16, 16]):
+def get_vector(points, size=16):
+    x_y_z = [size, size, size]
     # 3D Points -> [16,16,16]
     xyzmin = np.min(points, axis=0) - 0.001
     xyzmax = np.max(points, axis=0) + 0.001
@@ -17,7 +18,6 @@ def get_vector(points, x_y_z=[16, 16, 16]):
     diff = max(xyzmax - xyzmin) - (xyzmax - xyzmin)
     xyzmin = xyzmin - diff / 2
     xyzmax = xyzmax + diff / 2
-
     segments = []
     shape = []
 
@@ -45,27 +45,30 @@ def get_vector(points, x_y_z=[16, 16, 16]):
     vector = np.zeros(n_voxels)
     count = np.bincount(structure[:, 3])
     vector[:len(count)] = count
-    vector /= 255.0
     vector = vector.reshape((n_z, n_y, n_x))
     return vector
 
 
 class CustomDataset(Dataset):
-    def __init__(self, id_list, label_list, augment, task):
+    def __init__(self, id_list, label_list, augment, task, args):
         self.id_list = id_list
         self.label_list = label_list
         self.augment = augment
+        self.args = args
         if task == 'trainval':
-            self.pre_load = {x: np.load(os.path.join('./data/train_array', f'{x}.npy')).astype(np.uint8) for x in tqdm.tqdm(self.id_list)}
+            self.pre_load = {x: np.load(os.path.join(self.args.trainval_data, f'{x}.npy')) for x in
+                             self.id_list}
         elif task == 'test':
-            self.pre_load = {x: np.load(os.path.join('./data/test_array', f'{x}.npy')).astype(np.unit8) for x in tqdm.tqdm(self.id_list)}
+            self.pre_load = {x: np.load(os.path.join(self.args.test_data, f'{x}.npy')) for x in
+                             self.id_list}
 
     def __getitem__(self, index):
         image_id = self.id_list[index]
         points = self.pre_load[image_id]
         if self.augment:
             points = rand_rotate(points)
-        image = get_vector(points)
+        image = get_vector(points, self.args.input_size)
+        # print(np.max(image), np.min(image))
 
         if self.label_list is not None:
             label = self.label_list[index]

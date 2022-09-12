@@ -45,6 +45,7 @@ def parse_args():
     parser.add_argument('--submit_csv', type=str, help='name for submit file')
     parser.add_argument('--model', type=str, help='basemodel, c3d')
     parser.add_argument('--scheduler', type=str, help='Exponential, Cyclic')
+    parser.add_argument('--noval', action='store_true')
     args = parser.parse_args()
     return args
 
@@ -128,11 +129,13 @@ if __name__ == '__main__':
 
     # TODO: 5 split + 앙상블 코드 추가
     train_df = pd.read_csv(args.train_csv)
+    val_df = pd.read_csv(args.valid_csv)
+    if args.noval:
+        train_df = pd.concat([train_df, val_df])
     train_dataset = CustomDataset(train_df['ID'].values, train_df['label'].values, augment=True, task='trainval',
                                   args=args)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
 
-    val_df = pd.read_csv(args.valid_csv)
     val_dataset = CustomDataset(val_df['ID'].values, val_df['label'].values, augment=True, task='trainval', args=args)
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 

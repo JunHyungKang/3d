@@ -35,14 +35,20 @@ def train(model, optimizer, train_loader, val_loader, scheduler, device, writer,
         if scheduler is not None:
             scheduler.step()
 
-        val_loss, val_acc = validation(model, criterion, val_loader, device)
-        print(f'Epoch : [{epoch}] Train Loss : [{np.mean(train_loss)}] Val Loss : [{val_loss}] Val ACC : [{val_acc}]')
-        writer.add_scalar('Param/lr', optimizer.param_groups[0]['lr'], epoch)
-        writer.add_scalar('Loss/train', np.mean(train_loss), epoch)
-        writer.add_scalar('Loss/val', val_loss, epoch)
-        writer.add_scalar('val_acc', val_acc, epoch)
+        if not args.noval:
+            val_loss, val_acc = validation(model, criterion, val_loader, device)
+            print(f'Epoch : [{epoch}] Train Loss : [{np.mean(train_loss)}] Val Loss : [{val_loss}] Val ACC : [{val_acc}]')
+            writer.add_scalar('Param/lr', optimizer.param_groups[0]['lr'], epoch)
+            writer.add_scalar('Loss/train', np.mean(train_loss), epoch)
+            writer.add_scalar('Loss/val', val_loss, epoch)
+            writer.add_scalar('val_acc', val_acc, epoch)
+            if best_score < val_acc:
+                best_score = val_acc
+                os.makedirs(save_path, exist_ok=True)
+                torch.save(model.state_dict(), os.path.join(save_path, 'best_model.pth'))
+        else:
+            print(f'Epoch : [{epoch}] Train Loss : [{np.mean(train_loss)}]')
+            writer.add_scalar('Param/lr', optimizer.param_groups[0]['lr'], epoch)
+            torch.save(model.state_dict(), os.path.join(save_path, 'last_model.pth'))
 
-        if best_score < val_acc:
-            best_score = val_acc
-            os.makedirs(save_path, exist_ok=True)
-            torch.save(model.state_dict(), os.path.join(save_path, 'best_model.pth'))
+

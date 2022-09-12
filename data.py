@@ -55,6 +55,7 @@ class CustomDataset(Dataset):
         self.label_list = label_list
         self.augment = augment
         self.args = args
+        self.task = task
         if task == 'trainval':
             self.pre_load = {x: np.load(os.path.join(self.args.trainval_data, f'{x}.npy')) for x in
                              self.id_list}
@@ -65,6 +66,11 @@ class CustomDataset(Dataset):
     def __getitem__(self, index):
         image_id = self.id_list[index]
         points = self.pre_load[image_id]
+        # if self.task == 'trainval':
+        #     points = os.path.join(self.args.trainval_data, f'{image_id}.npy')
+        # elif task == 'test':
+        #     points = os.path.join(self.args.test_data, f'{image_id}.npy')
+
         if self.augment:
             points = rand_rotate(points)
         image = get_vector(points, self.args.input_size)
